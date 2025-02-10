@@ -29,10 +29,13 @@ const chatRef = collection(db, "chat");
 const auth = getAuth();
 const provider = new GoogleAuthProvider();
 
+let authenticated = false;
+
 document.getElementById("login-btn").addEventListener("click", async () => {
   try {
     await auth.signOut(); // Cerrar sesión antes de intentar iniciar una nueva
     const result = await signInWithPopup(auth, provider);
+    authenticated = true;
     console.log("Usuario autenticado:", result.user);
   } catch (error) {
     console.error("Error de autenticación:", error);
@@ -50,6 +53,7 @@ async function sendMessage(user, message) {
 
 // Escuchar mensajes en tiempo real
 onSnapshot(query(chatRef, orderBy("timestamp", "asc")), (snapshot) => {
+  if (!authenticated) return;
   const chatBox = document.getElementById("chat-box");
   chatBox.innerHTML = "";
   snapshot.forEach((doc) => {
