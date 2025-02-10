@@ -1,7 +1,6 @@
 // Import Firebase
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.0/firebase-app.js";
 import { getFirestore, collection, addDoc, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/11.3.0/firebase-firestore.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.3.0/firebase-analytics.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.3.0/firebase-auth.js";
 
 // Configuración de Firebase
@@ -17,37 +16,64 @@ const firebaseConfig = {
 
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
 const db = getFirestore(app);
-const chatRef = collection(db, "chat");
 const auth = getAuth();
 const provider = new GoogleAuthProvider();
+const chatRef = collection(db, "chat");
 
-let authenticated = false;
+let authenticatedUser = null; // Guarda el usuario autenticado
 
-// Botón de inicio de sesión
+// Manejo de autenticación
 document.getElementById("login-btn").addEventListener("click", async () => {
   try {
-    await auth.signOut(); // Cerrar sesión antes de iniciar una nueva
+    await auth.signOut(); // Cerrar sesión antes de una nueva autenticación
     const result = await signInWithPopup(auth, provider);
 
     if (result.user) {
-      console.log("Nombre:", result.user.displayName); 
-      console.log("Email:", result.user.email);
-      console.log("Foto:", result.user.photoURL);
-      authenticated = true;
-      console.log("Usuario autenticado:", result.user);
+      authenticatedUser = result.user;
+      console.log("Usuario autenticado:", authenticatedUser.displayName);
     }
   } catch (error) {
     console.error("Error de autenticación:", error);
-    authenticated = false; // Asegurar que no se marque como autenticado si falla
+  }
+});
+
+// Detectar cambios en la autenticación
+onAuthStateChanged(auth, (user) => {
+  authenticatedUser = user || null;
+  console.log("Cambio de autenticación:", authenticatedUser?.displayName || "No autenticado");
+});
+
+// Escuchar mensajes en tiempo real
+onSnapshot(query(chatRef, orderBy("timestamp", "asc")), (snapshot) => {
+  const chatBox = document.getElementById("chat-box");
+  chatBox.innerHTML = ""; // Limpiar antes de volver a insertar los mensajes
+
+  snapshot.forEach((doc) => {
+    const msg = doc.data();
+    const userName = msg.user || "Anónimo"; // Si no hay usuario, mostrar "Anónimo"
+    chatBox.innerHTML += `<p><b>${userName}:</b> ${msg.message}</p>`;
+  });
+
+  // Desplazar automáticamente al último mensaje
+  chatBox.scrollTop = chatBox.scrollHeight;
+});
+
+// Enviar mensaje con tecla Enter
+let input = document.getElementById("message");
+input.addEventListener("keyup", function (e) {
+  if (e.key === "Enter" && input.value.trim()) {
+    if (authenticatedUser) {
+      sendMessage(authenticatedUser.displayName, input.value.trim());
+    } else {
+      console.error("Debe iniciar sesión para enviar mensajes.");
+    }
+    input.value = ""; // Limpiar input después de enviar
   }
 });
 
 // Función para enviar mensajes
 async function sendMessage(user, message) {
-  if (!user || !message.trim()) return;
-  
   try {
     await addDoc(chatRef, {
       user,
@@ -58,38 +84,3 @@ async function sendMessage(user, message) {
     console.error("Error al enviar mensaje:", error);
   }
 }
-
-// Escuchar autenticación en tiempo real
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    authenticated = true;
-  } else {
-    authenticated = false;
-  }
-});
-
-// Escuchar mensajes en tiempo real
-onSnapshot(query(chatRef, orderBy("timestamp", "asc")), (snapshot) => {
-  if (!authenticated) return;
-
-  const chatBox = document.getElementById("chat-box");
-  chatBox.innerHTML = "";
-  snapshot.forEach((doc) => {
-    const msg = doc.data();
-    chatBox.innerHTML += `<p><b>${msg.user}:</b> ${msg.message}</p>`;
-  });
-});
-
-// Enviar mensaje con tecla Enter
-let input = document.getElementById('message');
-input.addEventListener('keyup', function(e) {
-  if (e.key === "Enter") {
-    const user = auth.currentUser ? auth.currentUser.displayName : "Anónimo";
-    const message = input.value.trim();
-    
-    if (message) {
-      sendMessage(user, message);
-      input.value = "";
-    }
-  }
-});
