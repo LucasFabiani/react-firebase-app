@@ -34,7 +34,17 @@ let authenticated = false;
 document.getElementById("login-btn").addEventListener("click", async () => {
   try {
     await auth.signOut(); // Cerrar sesión antes de intentar iniciar una nueva
-    const result = await signInWithPopup(auth, provider);
+    const result = await signInWithPopup(auth, provider)
+    .then((result) => {
+      // El usuario ha iniciado sesión
+      const user = result.user;
+      console.log("Nombre:", user.displayName); // Nombre de la cuenta
+      console.log("Email:", user.email); // Correo electrónico
+      console.log("Foto:", user.photoURL); // Foto de perfil (opcional)
+    })
+    .catch((error) => {
+      console.error("Error en la autenticación:", error);
+    });
     authenticated = true;
     console.log("Usuario autenticado:", result.user);
   } catch (error) {
@@ -62,9 +72,13 @@ onSnapshot(query(chatRef, orderBy("timestamp", "asc")), (snapshot) => {
   });
 });
 
-// Ejemplo de uso
-document.getElementById("send-btn").addEventListener("click", () => {
-  const user = document.getElementById("user").value;
-  const message = document.getElementById("message").value;
-  sendMessage(user, message);
+let input = document.getElementById('message');
+input.addEventListener('keyup', function(e) {
+  var keycode = e.keyCode || e.which;
+  if (keycode == 13) {
+    const user = auth.currentUser.displayName
+    const message = input.value;
+    sendMessage(user, message);
+    input.value = "";
+  }
 });
