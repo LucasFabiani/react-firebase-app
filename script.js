@@ -45,7 +45,7 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // Escuchar mensajes en tiempo real
-onSnapshot(query(chatRef, orderBy("timestamp", "asc")), (snapshot) => {
+onSnapshot(query(chatRef, orderBy("timestamp", "asc"), limitToLast(25)), (snapshot) => {
   const chatBox = document.getElementById("chat-box");
   chatBox.innerHTML = ""; // Limpiar antes de volver a insertar los mensajes
 
