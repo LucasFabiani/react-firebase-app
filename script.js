@@ -47,15 +47,17 @@ onAuthStateChanged(auth, (user) => {
 // Escuchar mensajes en tiempo real
 onSnapshot(query(chatRef, orderBy("timestamp", "asc"), limitToLast(25)), (snapshot) => {
   const chatBox = document.getElementById("chat-box");
-  chatBox.innerHTML = ""; // Limpiar antes de volver a insertar los mensajes
+  chatBox.innerHTML = "";
 
   snapshot.forEach((doc) => {
     const msg = doc.data();
-    const userName = msg.user || "Anónimo"; // Si no hay usuario, mostrar "Anónimo"
-    chatBox.innerHTML += `<p><b>${userName}:</b> ${msg.message}</p>`;
+    const userName = msg.user || "Anónimo";
+    const messageElement = document.createElement("p");
+    messageElement.innerHTML = `<b>${userName}:</b> ${msg.message}`;
+    chatBox.appendChild(messageElement);
   });
 
-  // Desplazar automáticamente al último mensaje
+  // 🔹 Desplazar automáticamente al último mensaje
   chatBox.scrollTop = chatBox.scrollHeight;
 });
 
