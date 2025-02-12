@@ -129,3 +129,45 @@ async function sendMessage(user, message) {
     console.error("Error al enviar mensaje:", error);
   }
 }
+
+// Opcion para instalar app en el movil con Chrome
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js")
+    .then(() => console.log("Service Worker registrado"))
+    .catch((err) => console.log("Error en Service Worker", err));
+}
+
+let deferredPrompt;
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredPrompt = event;
+
+  // Muestra el botón de instalación
+  const installBtn = document.createElement("button");
+  installBtn.innerText = "Instalar App";
+  installBtn.style.position = "fixed";
+  installBtn.style.bottom = "20px";
+  installBtn.style.right = "20px";
+  installBtn.style.padding = "10px";
+  installBtn.style.backgroundColor = "#4CAF50";
+  installBtn.style.color = "#fff";
+  installBtn.style.border = "none";
+  installBtn.style.borderRadius = "5px";
+  installBtn.style.cursor = "pointer";
+
+  document.body.appendChild(installBtn);
+
+  installBtn.addEventListener("click", () => {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === "accepted") {
+        console.log("Usuario aceptó la instalación");
+      } else {
+        console.log("Usuario canceló la instalación");
+      }
+      deferredPrompt = null;
+      document.body.removeChild(installBtn);
+    });
+  });
+});
