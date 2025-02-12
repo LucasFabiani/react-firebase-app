@@ -1,6 +1,6 @@
 // Import Firebase
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.0/firebase-app.js";
-import { getFirestore, collection, addDoc, query, orderBy, limitToLast, onSnapshot } from "https://www.gstatic.com/firebasejs/11.3.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, query, orderBy, limit, limitToLast, onSnapshot } from "https://www.gstatic.com/firebasejs/11.3.0/firebase-firestore.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.3.0/firebase-auth.js";
 
 // Configuración de Firebase
@@ -19,12 +19,16 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth();
 const provider = new GoogleAuthProvider();
-const chatRef = collection(db, "chat");
+
+const chatBox = document.getElementById("chat-box");
+const loginBtn = document.getElementById("login-btn");
+const logoutBtn = document.getElementById("logout-btn");
 
 let authenticatedUser = null; // Guarda el usuario autenticado
+let unsubscribe = null;
 
 // Manejo de autenticación
-document.getElementById("login-btn").addEventListener("click", async () => {
+loginBtn.addEventListener("click", async () => {
   try {
     await auth.signOut(); // Cerrar sesión antes de una nueva autenticación
     const result = await signInWithPopup(auth, provider);
@@ -38,27 +42,64 @@ document.getElementById("login-btn").addEventListener("click", async () => {
   }
 });
 
+// Salir de la cuenta
+logoutBtn.addEventListener("click", async () => {
+  try {
+    await auth.signOut(); // Cerrar sesión antes de una nueva autenticación
+  } catch (error) {
+    console.error("Error al salir:", error);
+  }
+})
+
 // Detectar cambios en la autenticación
 onAuthStateChanged(auth, (user) => {
   authenticatedUser = user || null;
-  console.log("Cambio de autenticación:", authenticatedUser?.displayName || "No autenticado");
-});
+  
+  if (user) {
+    console.log("Usuario autenticado: ", user);
+    loginBtn.style.display = 'none';
+    logoutBtn.style.display = 'flex';
 
-// Escuchar mensajes en tiempo real
-onSnapshot(query(chatRef, orderBy("timestamp", "asc"), limitToLast(25)), (snapshot) => {
-  const chatBox = document.getElementById("chat-box");
-  chatBox.innerHTML = "";
+    if (unsubscribe) {
+      unsubscribe();
+    }
+  
+    const chatRef = collection(db, "chat");
+    const chatQuery = query(chatRef, orderBy("timestamp", "desc"), limit(25));
+  
+    unsubscribe = onSnapshot(chatQuery, (snapshot) => {
+      chatBox.innerHTML = "";
+  
+      const messages = [];
+      snapshot.forEach((doc) => {
+        const msg = doc.data();
+        messages.push(msg);
+      });
 
-  snapshot.forEach((doc) => {
-    const msg = doc.data();
-    const userName = msg.user || "Anónimo";
-    const messageElement = document.createElement("p");
-    messageElement.innerHTML = `<b>${userName}:</b> ${msg.message}`;
-    chatBox.appendChild(messageElement);
-  });
+      // Ordenar en orden ascendente para mostrar de más antiguo a más reciente
+      messages.reverse();
 
-  // 🔹 Desplazar automáticamente al último mensaje
-  chatBox.scrollTop = chatBox.scrollHeight;
+      messages.forEach((msg) => {
+        const userName = msg.user || "Anónimo";
+        const messageElement = document.createElement("p");
+        messageElement.innerHTML = `<b>${userName}:</b> ${msg.message}`;
+        chatBox.appendChild(messageElement);
+      })
+    }, (err) => {
+      console.log("Error en snapshot: ", error);
+    })
+  } else {
+    console.log("Sesion terminada");
+    chatBox.innerHTML = "";
+    loginBtn.style.display = 'flex';
+    logoutBtn.style.display = 'none';
+
+    // Si el usuario cierra sesión, detenemos el listener
+    if (unsubscribe) {
+      unsubscribe();
+      unsubscribe = null;
+    }
+  }
 });
 
 // Enviar mensaje con tecla Enter
@@ -77,6 +118,8 @@ input.addEventListener("keyup", function (e) {
 // Función para enviar mensajes
 async function sendMessage(user, message) {
   try {
+    const chatRef = collection(db, "chat");
+
     await addDoc(chatRef, {
       user,
       message,
