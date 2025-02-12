@@ -37,7 +37,10 @@ button:hover {
 h1 {
   text-align: center;
   padding: .5rem;
-  color: rgb(109, 170, 147);
+  color: rgb(102, 102, 102);
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
   .chat-container {
     display: flex;
@@ -55,7 +58,7 @@ h1 {
 
   .icon {
     width: 1.5em;
-    margin: 0 .5em;
+    margin: 0 .4em;
   }
   
   #chat-box {
