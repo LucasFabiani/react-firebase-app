@@ -44,7 +44,7 @@ h1 {
     flex-direction: column;
     flex-grow: 1;
     overflow: hidden;
-    max-height: 90vh;
+    max-height: 80vh;
   }
 
 .flex {
