@@ -132,7 +132,7 @@ async function sendMessage(user, message) {
 
 // Opcion para instalar app en el movil con Chrome
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/sw.js")
+  navigator.serviceWorker.register("sw.js")
     .then(() => console.log("Service Worker registrado"))
     .catch((err) => console.log("Error en Service Worker", err));
 }
